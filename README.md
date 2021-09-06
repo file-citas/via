@@ -27,6 +27,7 @@ docker run -v <tmp_indir>:/tmp_indir --env FUZZ_TARGET="rocker" via /via/fuzz/bi
 * python3.8
 * libllvm10
 * llvm-10
+* cmake
 
 ## Clone Repo
 ```
@@ -36,7 +37,6 @@ git clone https://github.com/file-citas/via.git via
 ## Build clang
 ```
 cd via
-mkdir llvm_install
 cd via/llvm
 mkdir build
 cd build
