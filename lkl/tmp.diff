@@ -1,0 +1,402 @@
+diff --git a/drivers/net/ethernet/sun/sunhme.c b/drivers/net/ethernet/sun/sunhme.c
+index c2b52dc9d5b3..5b67ded10ded 100644
+--- a/drivers/net/ethernet/sun/sunhme.c
++++ b/drivers/net/ethernet/sun/sunhme.c
+@@ -858,6 +858,7 @@ static void happy_meal_timer(struct timer_list *t)
+ 
+ 	if (restart_timer) {
+ 		hp->happy_timer.expires = jiffies + ((12 * HZ)/10); /* 1.2 sec. */
++		//hp->happy_timer.expires = jiffies;
+ 		add_timer(&hp->happy_timer);
+ 	}
+ 
+@@ -1415,6 +1416,7 @@ happy_meal_begin_auto_negotiation(struct happy_meal *hp,
+ 
+ 	hp->timer_ticks = 0;
+ 	hp->happy_timer.expires = jiffies + (12 * HZ)/10;  /* 1.2 sec. */
++	//hp->happy_timer.expires = jiffies;// + (12 * HZ)/10;  /* 1.2 sec. */
+ 	add_timer(&hp->happy_timer);
+ }
+ 
+diff --git a/drivers/net/vmxnet3/vmxnet3_drv.c b/drivers/net/vmxnet3/vmxnet3_drv.c
+index 2c088dbdb48d..a909d87dfd7b 100644
+--- a/drivers/net/vmxnet3/vmxnet3_drv.c
++++ b/drivers/net/vmxnet3/vmxnet3_drv.c
+@@ -3576,6 +3576,7 @@ vmxnet3_probe_device(struct pci_dev *pdev,
+ 	if (err < 0)
+ 		goto err_alloc_pci;
+ 
++   pr_err("%s:%d\n", __FUNCTION__,  __LINE__);
+ 	ver = VMXNET3_READ_BAR1_REG(adapter, VMXNET3_REG_VRRS);
+ 	if (ver & (1 << VMXNET3_REV_4)) {
+ 		VMXNET3_WRITE_BAR1_REG(adapter,
+@@ -3605,6 +3606,7 @@ vmxnet3_probe_device(struct pci_dev *pdev,
+ 	}
+ 	dev_dbg(&pdev->dev, "Using device version %d\n", adapter->version);
+ 
++   pr_err("%s:%d\n", __FUNCTION__,  __LINE__);
+ 	ver = VMXNET3_READ_BAR1_REG(adapter, VMXNET3_REG_UVRS);
+ 	if (ver & 1) {
+ 		VMXNET3_WRITE_BAR1_REG(adapter, VMXNET3_REG_UVRS, 1);
+@@ -3615,6 +3617,7 @@ vmxnet3_probe_device(struct pci_dev *pdev,
+ 		goto err_ver;
+ 	}
+ 
++   pr_err("%s:%d\n", __FUNCTION__,  __LINE__);
+ 	if (VMXNET3_VERSION_GE_3(adapter)) {
+ 		adapter->coal_conf =
+ 			dma_alloc_coherent(&adapter->pdev->dev,
+@@ -3630,6 +3633,7 @@ vmxnet3_probe_device(struct pci_dev *pdev,
+ 		adapter->default_coal_mode = true;
+ 	}
+ 
++   pr_err("%s:%d\n", __FUNCTION__,  __LINE__);
+ 	if (VMXNET3_VERSION_GE_4(adapter)) {
+ 		adapter->default_rss_fields = true;
+ 		adapter->rss_fields = VMXNET3_RSS_FIELDS_DEFAULT;
+diff --git a/drivers/nvme/host/core.c b/drivers/nvme/host/core.c
+index 9a270e49df17..51bf1493c7f4 100644
+--- a/drivers/nvme/host/core.c
++++ b/drivers/nvme/host/core.c
+@@ -324,7 +324,11 @@ void nvme_complete_rq(struct request *req)
+ 
+ 	switch (nvme_decide_disposition(req)) {
+ 	case COMPLETE:
+-		nvme_end_req(req);
++      if(req->end_io_data) {
++         nvme_end_req(req);
++      } else {
++         pr_err("%s warning trying to terminate uninitialized request\n", __FUNCTION__);
++      }
+ 		return;
+ 	case RETRY:
+ 		nvme_retry_req(req);
+@@ -3117,7 +3121,7 @@ int nvme_init_identify(struct nvme_ctrl *ctrl)
+ 	ret = nvme_configure_apst(ctrl);
+ 	if (ret < 0)
+ 		return ret;
+-	
++
+ 	ret = nvme_configure_timestamp(ctrl);
+ 	if (ret < 0)
+ 		return ret;
+diff --git a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+index 3be352403839..9067a86dc454 100644
+--- a/drivers/nvme/host/pci.c
++++ b/drivers/nvme/host/pci.c
+@@ -959,9 +959,11 @@ static inline void nvme_ring_cq_doorbell(struct nvme_queue *nvmeq)
+ 
+ static inline struct blk_mq_tags *nvme_queue_tagset(struct nvme_queue *nvmeq)
+ {
+-	if (!nvmeq->qid)
++	if (!nvmeq->qid && nvmeq->dev && nvmeq->dev->admin_tagset.tags!=NULL)
+ 		return nvmeq->dev->admin_tagset.tags[0];
+-	return nvmeq->dev->tagset.tags[nvmeq->qid - 1];
++   if(nvmeq->dev && nvmeq->dev->tagset.tags)
++      return nvmeq->dev->tagset.tags[nvmeq->qid - 1];
++   return NULL;
+ }
+ 
+ static inline void nvme_handle_cqe(struct nvme_queue *nvmeq, u16 idx)
+@@ -2138,7 +2140,7 @@ static int nvme_setup_io_queues(struct nvme_dev *dev)
+ 
+ 	if (nr_io_queues == 0)
+ 		return 0;
+-	
++
+ 	clear_bit(NVMEQ_ENABLED, &adminq->flags);
+ 
+ 	if (dev->cmb_use_sqes) {
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index fa275a054f46..8a34f67ac46c 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -3844,6 +3844,7 @@ int dev_ioctl(struct net *net, unsigned int cmd, struct ifreq *ifr,
+ 		bool *need_copyout);
+ int dev_ifconf(struct net *net, struct ifconf *, int);
+ int dev_ethtool(struct net *net, struct ifreq *);
++int dev_ethtool_confall(struct net *net, struct ifreq *);
+ unsigned int dev_get_flags(const struct net_device *);
+ int __dev_change_flags(struct net_device *dev, unsigned int flags,
+ 		       struct netlink_ext_ack *extack);
+diff --git a/include/uapi/linux/sockios.h b/include/uapi/linux/sockios.h
+index 7d1bccbbef78..41323ed146ff 100644
+--- a/include/uapi/linux/sockios.h
++++ b/include/uapi/linux/sockios.h
+@@ -76,7 +76,7 @@
+ #define SIOCSIFNAME	0x8923		/* set interface name */
+ #define	SIOCSIFHWADDR	0x8924		/* set hardware address 	*/
+ #define SIOCGIFENCAP	0x8925		/* get/set encapsulations       */
+-#define SIOCSIFENCAP	0x8926		
++#define SIOCSIFENCAP	0x8926
+ #define SIOCGIFHWADDR	0x8927		/* Get hardware address		*/
+ #define SIOCGIFSLAVE	0x8929		/* Driver slaving support	*/
+ #define SIOCSIFSLAVE	0x8930
+@@ -142,7 +142,7 @@
+ #define SIOCBONDSLAVEINFOQUERY 0x8993   /* rtn info about slave state   */
+ #define SIOCBONDINFOQUERY      0x8994	/* rtn info about bond state    */
+ #define SIOCBONDCHANGEACTIVE   0x8995   /* update to a new active slave */
+-			
++
+ /* bridge calls */
+ #define SIOCBRADDBR     0x89a0		/* create new bridge device     */
+ #define SIOCBRDELBR     0x89a1		/* remove bridge device         */
+@@ -153,6 +153,9 @@
+ #define SIOCSHWTSTAMP	0x89b0		/* set and get config		*/
+ #define SIOCGHWTSTAMP	0x89b1		/* get config			*/
+ 
++/* custom */
++#define SIOCETHCUSTOM	0x89c1		/* Ethtool interface		*/
++
+ /* Device private ioctl calls */
+ 
+ /*
+@@ -163,12 +166,12 @@
+  *
+  *	THESE IOCTLS ARE _DEPRECATED_ AND WILL DISAPPEAR IN 2.5.X -DaveM
+  */
+- 
++
+ #define SIOCDEVPRIVATE	0x89F0	/* to 89FF */
+ 
+ /*
+  *	These 16 ioctl calls are protocol private
+  */
+- 
++
+ #define SIOCPROTOPRIVATE 0x89E0 /* to 89EF */
+ #endif	/* _LINUX_SOCKIOS_H */
+diff --git a/net/core/dev.c b/net/core/dev.c
+index 002ac4e7ad06..2ed8bc7231eb 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -6010,9 +6010,9 @@ static enum gro_result dev_gro_receive(struct napi_struct *napi, struct sk_buff
+ 			(uint64_t)skb->len,
+ 			(uint64_t)skb->data_len
+ 			);
+-	if(grow != grow0) {
+-		BUG();
+-	}
++	//if(grow != grow0) {
++	//	BUG();
++	//}
+ 	if (grow > 0) {
+ 		gro_pull_from_frag0(skb, grow);
+ 	}
+diff --git a/net/core/dev_ioctl.c b/net/core/dev_ioctl.c
+index 205e92e604ef..602cbd2c5c23 100644
+--- a/net/core/dev_ioctl.c
++++ b/net/core/dev_ioctl.c
+@@ -449,6 +449,21 @@ int dev_ioctl(struct net *net, unsigned int cmd, struct ifreq *ifr, bool *need_c
+ 			*colon = ':';
+ 		return ret;
+ 
++	case SIOCETHCUSTOM:
++      // used for evaluation against agamotto
++      // agamotto uses default debian userspace
++      // which invokes ethtool on new net devices
++		dev_load(net, ifr->ifr_name);
++		rtnl_lock();
++      dev_ifsioc(net, ifr, SIOCGIFINDEX);
++		ret = dev_ethtool_confall(net, ifr);
++      dev_ifsioc(net, ifr, SIOCSIFHWADDR);
++      dev_ifsioc(net, ifr, SIOCSIFMTU);
++		rtnl_unlock();
++		if (colon)
++			*colon = ':';
++		return ret;
++
+ 	/*
+ 	 *	These ioctl calls:
+ 	 *	- require superuser power.
+diff --git a/net/ethtool/ioctl.c b/net/ethtool/ioctl.c
+index ec2cd7aab5ad..6bcbaa1891a7 100644
+--- a/net/ethtool/ioctl.c
++++ b/net/ethtool/ioctl.c
+@@ -580,8 +580,10 @@ static int ethtool_set_link_ksettings(struct net_device *dev,
+ 		return -EFAULT;
+ 
+ 	if (__ETHTOOL_LINK_MODE_MASK_NU32
+-	    != link_ksettings.base.link_mode_masks_nwords)
+-		return -EINVAL;
++	    != link_ksettings.base.link_mode_masks_nwords) {
++      link_ksettings.base.link_mode_masks_nwords = __ETHTOOL_LINK_MODE_MASK_NU32;
++		//return -EINVAL;
++   }
+ 
+ 	/* copy the whole structure, now that we know it has expected
+ 	 * format
+@@ -592,8 +594,10 @@ static int ethtool_set_link_ksettings(struct net_device *dev,
+ 
+ 	/* re-check nwords field, just in case */
+ 	if (__ETHTOOL_LINK_MODE_MASK_NU32
+-	    != link_ksettings.base.link_mode_masks_nwords)
+-		return -EINVAL;
++	    != link_ksettings.base.link_mode_masks_nwords) {
++      link_ksettings.base.link_mode_masks_nwords = __ETHTOOL_LINK_MODE_MASK_NU32;
++		//return -EINVAL;
++   }
+ 
+ 	if (link_ksettings.base.master_slave_cfg ||
+ 	    link_ksettings.base.master_slave_state)
+@@ -2560,6 +2564,160 @@ static int ethtool_set_fecparam(struct net_device *dev, void __user *useraddr)
+ 
+ /* The main entry point in this file.  Called from net/core/dev_ioctl.c */
+ 
++int dev_ethtool_confall(struct net *net, struct ifreq *ifr)
++{
++	struct net_device *dev = __dev_get_by_name(net, ifr->ifr_name);
++	void __user *useraddr = ifr->ifr_data;
++	u32 ethcmd, sub_cmd;
++	int rc;
++	netdev_features_t old_features;
++
++	if (!dev || !netif_device_present(dev))
++		return -ENODEV;
++
++	if (copy_from_user(&ethcmd, useraddr, sizeof(ethcmd)))
++		return -EFAULT;
++
++	if (ethcmd == ETHTOOL_PERQUEUE) {
++		if (copy_from_user(&sub_cmd, useraddr + sizeof(ethcmd), sizeof(sub_cmd)))
++			return -EFAULT;
++	} else {
++		sub_cmd = ethcmd;
++	}
++	/* Allow some commands to be done by anyone */
++	switch (sub_cmd) {
++	case ETHTOOL_GSET:
++	case ETHTOOL_GDRVINFO:
++	case ETHTOOL_GMSGLVL:
++	case ETHTOOL_GLINK:
++	case ETHTOOL_GCOALESCE:
++	case ETHTOOL_GRINGPARAM:
++	case ETHTOOL_GPAUSEPARAM:
++	case ETHTOOL_GRXCSUM:
++	case ETHTOOL_GTXCSUM:
++	case ETHTOOL_GSG:
++	case ETHTOOL_GSSET_INFO:
++	case ETHTOOL_GSTRINGS:
++	case ETHTOOL_GSTATS:
++	case ETHTOOL_GPHYSTATS:
++	case ETHTOOL_GTSO:
++	case ETHTOOL_GPERMADDR:
++	case ETHTOOL_GUFO:
++	case ETHTOOL_GGSO:
++	case ETHTOOL_GGRO:
++	case ETHTOOL_GFLAGS:
++	case ETHTOOL_GPFLAGS:
++	case ETHTOOL_GRXFH:
++	case ETHTOOL_GRXRINGS:
++	case ETHTOOL_GRXCLSRLCNT:
++	case ETHTOOL_GRXCLSRULE:
++	case ETHTOOL_GRXCLSRLALL:
++	case ETHTOOL_GRXFHINDIR:
++	case ETHTOOL_GRSSH:
++	case ETHTOOL_GFEATURES:
++	case ETHTOOL_GCHANNELS:
++	case ETHTOOL_GET_TS_INFO:
++	case ETHTOOL_GEEE:
++	case ETHTOOL_GTUNABLE:
++	case ETHTOOL_PHY_GTUNABLE:
++	case ETHTOOL_GLINKSETTINGS:
++	case ETHTOOL_GFECPARAM:
++		break;
++	default:
++		if (!ns_capable(net->user_ns, CAP_NET_ADMIN))
++			return -EPERM;
++	}
++
++	if (dev->ethtool_ops->begin) {
++		rc = dev->ethtool_ops->begin(dev);
++		if (rc  < 0)
++			return rc;
++	}
++	old_features = dev->features;
++	rc = ethtool_get_settings(dev, useraddr);
++   rc = ethtool_get_drvinfo(dev, useraddr);
++	//	rc = ethtool_set_settings(dev, useraddr);
++	rc = ethtool_get_regs(dev, useraddr);
++	//	rc = ethtool_get_wol(dev, useraddr);
++	rc = ethtool_set_wol(dev, useraddr);
++	//	rc = ethtool_get_value(dev, useraddr, ethcmd,
++	//			       dev->ethtool_ops->get_msglevel);
++	//	rc = ethtool_set_value_void(dev, useraddr,
++	//			       dev->ethtool_ops->set_msglevel);
++	//	if (!rc)
++	//		ethtool_notify(dev, ETHTOOL_MSG_DEBUG_NTF, NULL);
++	rc = ethtool_get_eee(dev, useraddr);
++	//	rc = ethtool_set_eee(dev, useraddr);
++	//	rc = ethtool_nway_reset(dev);
++	rc = ethtool_get_link(dev, useraddr);
++	rc = ethtool_get_eeprom(dev, useraddr);
++	//	rc = ethtool_set_eeprom(dev, useraddr);
++   // bug in vmxnet3_get_coalesce
++	//rc = ethtool_get_coalesce(dev, useraddr);
++	//	rc = ethtool_set_coalesce(dev, useraddr);
++	rc = ethtool_get_ringparam(dev, useraddr);
++	//	rc = ethtool_set_ringparam(dev, useraddr);
++	//	rc = ethtool_get_pauseparam(dev, useraddr);
++	//	rc = ethtool_set_pauseparam(dev, useraddr);
++	//	rc = ethtool_self_test(dev, useraddr);
++	rc = ethtool_get_strings(dev, useraddr);
++	//	rc = ethtool_phys_id(dev, useraddr);
++	rc = ethtool_get_stats(dev, useraddr);
++	rc = ethtool_get_perm_addr(dev, useraddr);
++	//	rc = ethtool_get_value(dev, useraddr, ethcmd,
++	//				__ethtool_get_flags);
++	//	rc = ethtool_set_value(dev, useraddr, __ethtool_set_flags);
++	//	rc = ethtool_get_value(dev, useraddr, ethcmd,
++	//			       dev->ethtool_ops->get_priv_flags);
++	//	if (!rc)
++	//		ethtool_notify(dev, ETHTOOL_MSG_PRIVFLAGS_NTF, NULL);
++	//	rc = ethtool_set_value(dev, useraddr,
++	//			       dev->ethtool_ops->set_priv_flags);
++	rc = ethtool_get_rxnfc(dev, ethcmd, useraddr);
++	//	rc = ethtool_set_rxnfc(dev, ethcmd, useraddr);
++	//	rc = ethtool_flash_device(dev, useraddr);
++	//	rc = ethtool_reset(dev, useraddr);
++	//	rc = ethtool_get_sset_info(dev, useraddr);
++   // vmxnet3bug
++	//rc = ethtool_get_rxfh_indir(dev, useraddr);
++	//	rc = ethtool_set_rxfh_indir(dev, useraddr);
++   // vmxnet3bug
++	//rc = ethtool_get_rxfh_indir(dev, useraddr);
++	//rc = ethtool_get_rxfh(dev, useraddr);
++	//	rc = ethtool_set_rxfh(dev, useraddr);
++	rc = ethtool_get_features(dev, useraddr);
++	rc = ethtool_set_features(dev, useraddr);
++	//	rc = ethtool_get_one_feature(dev, useraddr, ethcmd);
++	//	rc = ethtool_set_one_feature(dev, useraddr, ethcmd);
++	rc = ethtool_get_channels(dev, useraddr);
++	//	rc = ethtool_set_channels(dev, useraddr);
++	//	rc = ethtool_set_dump(dev, useraddr);
++	//	rc = ethtool_get_dump_flag(dev, useraddr);
++	//	rc = ethtool_get_dump_data(dev, useraddr);
++	rc = ethtool_get_ts_info(dev, useraddr);
++	rc = ethtool_get_module_info(dev, useraddr);
++	rc = ethtool_get_module_eeprom(dev, useraddr);
++	rc = ethtool_get_tunable(dev, useraddr);
++	//	rc = ethtool_set_tunable(dev, useraddr);
++	rc = ethtool_get_phy_stats(dev, useraddr);
++	//	rc = ethtool_set_per_queue(dev, useraddr, sub_cmd);
++	rc = ethtool_get_link_ksettings(dev, useraddr);
++	rc = ethtool_set_link_ksettings(dev, useraddr);
++	rc = get_phy_tunable(dev, useraddr);
++	//	rc = set_phy_tunable(dev, useraddr);
++	rc = ethtool_get_fecparam(dev, useraddr);
++	//	rc = ethtool_set_fecparam(dev, useraddr);
++
++	if (dev->ethtool_ops->complete)
++		dev->ethtool_ops->complete(dev);
++
++	if (old_features != dev->features)
++		netdev_features_change(dev);
++
++	return rc;
++
++}
++
+ int dev_ethtool(struct net *net, struct ifreq *ifr)
+ {
+ 	struct net_device *dev = __dev_get_by_name(net, ifr->ifr_name);

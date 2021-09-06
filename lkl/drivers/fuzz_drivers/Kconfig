@@ -1,0 +1,5 @@
+config FUZZ_ACPI_MODULE
+tristate "Fake module to fuzz acpi"
+default m
+help
+Fake module to fuzz acpi

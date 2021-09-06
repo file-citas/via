@@ -1,0 +1,15 @@
+export VIA_PG_PATH=$VIA_PATH/fuzz
+export VIA_LKL_PATH=$VIA_PATH/lkl
+export VIA_LLVM_PATH=$VIA_PATH/llvm
+
+export CC=$VIA_LLVM_PATH/build/bin/clang
+export CPP=$VIA_LLVM_PATH/build/bin/clang++
+export LD_LIBRARY_PATH=$VIA_LKL_PATH/tools/lkl/lib:$VIA_PG_PATH/bin
+export VIA_MODULES=$VIA_PG_PATH/targets_fuzz
+export VIA_CONFIGS=$VIA_PG_PATH/configs
+export VIA_HARNESS=$VIA_PG_PATH/bin/harness
+export VIA_FW=$VIA_PG_PATH/fw
+export ASAN_OPTIONS=detect_leaks=0
+#export PATH=$VIA_LLVM_PATH/build/bin:$PATH
+export VIA_BEVAL_DIR=$VIA_PATH/benchmarks/eval
+export VIA_BRESULT_DIR=$VIA_PATH/benchmarks/results

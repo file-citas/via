@@ -1,0 +1,7 @@
+virtio_net
+virtio_blk
+virtio_crypto
+virtio-rng
+virtio_console
+virtio_balloon
+virtio_input
