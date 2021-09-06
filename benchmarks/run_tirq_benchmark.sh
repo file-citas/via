@@ -22,28 +22,18 @@ if [ "$VIA_B_WORKERS" -gt "$NCPUS" ]; then
 fi
 VIA_B_TASKSET=$(seq -s" " 0 $((VIA_B_WORKERS-1)))
 
-export VIA_B_TIME="$VIA_B_TIME"
-export VIA_B_RUNS="$VIA_B_RUNS"
-export VIA_B_TTB_RUNS="$VIA_B_TTB_RUNS"
-export VIA_B_TIRQ_RUNS="$VIA_B_TIRQ_RUNS"
-export VIA_B_TIME_TTB="$VIA_B_TIME_TTB"
-export VIA_B_WORKERS="$VIA_B_WORKERS"
-export VIA_B_TASKSET="$VIA_B_TASKSET"
-
 echo ""
 echo "################################################################################"
-echo "# RUNNING BENCHMARKS"
+echo "# Target IRQs"
 echo "################################################################################"
-echo "VIA_B_TIME      $VIA_B_TIME"
-echo "VIA_B_RUNS      $VIA_B_RUNS"
-echo "VIA_B_TTB_RUNS  $VIA_B_TTB_RUNS"
-echo "VIA_B_TIRQ_RUNS $VIA_B_TIRQ_RUNS"
-echo "VIA_B_TIME_TTB  $VIA_B_TIME_TTB"
-echo "VIA_B_WORKERS   $VIA_B_WORKERS"
-echo "VIA_B_TASKSET   $VIA_B_TASKSET"
+
+echo  "RUN: Rocker TIRQ"
+mkdir $VIA_BRESULT_DIR/rocker_tirq
+cd $VIA_BRESULT_DIR/rocker_tirq
+python3 $VIA_BEVAL_DIR/run_bench.py -targets rocker_tirq rocker_rirq_1_1000 -time -1 -time_per_run 10800 -timeout 120 -runs $VIA_B_TIRQ_RUNS -workers $VIA_B_WORKERS -taskset $VIA_B_TASKSET -patch_level 2 -update_hwm 1 -apply_hacks 1 -min_delay 1 -reset_indir -fast_irqs 0 > $VIA_BRESULT_DIR/rocker_triq.log
+python3 $VIA_BEVAL_DIR/parse_bench.py . > $VIA_BRESULT_DIR/rocker_triq.json
+
+echo "EVAL: Rocker TIRQ TTB"
+python3 $VIA_BEVAL_DIR/eval_bench.py -data $VIA_BRESULT_DIR/rocker_triq.json -confkey _tiq1_wait1-1000_hck1_pt11_pt21_del1 _tiq0_wait1-1000_hck1_pt11_pt21_del1 -key ttb2 | tee $VIA_BRESULT_DIR/tirq.res
 echo ""
 
-$VIA_PATH/benchmarks/run_aga_benchmark.sh
-$VIA_PATH/benchmarks/run_tirq_benchmark.sh
-$VIA_PATH/benchmarks/run_delay_benchmark.sh
-$VIA_PATH/benchmarks/run_ttb_benchmark.sh

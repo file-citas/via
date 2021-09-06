@@ -22,28 +22,16 @@ if [ "$VIA_B_WORKERS" -gt "$NCPUS" ]; then
 fi
 VIA_B_TASKSET=$(seq -s" " 0 $((VIA_B_WORKERS-1)))
 
-export VIA_B_TIME="$VIA_B_TIME"
-export VIA_B_RUNS="$VIA_B_RUNS"
-export VIA_B_TTB_RUNS="$VIA_B_TTB_RUNS"
-export VIA_B_TIRQ_RUNS="$VIA_B_TIRQ_RUNS"
-export VIA_B_TIME_TTB="$VIA_B_TIME_TTB"
-export VIA_B_WORKERS="$VIA_B_WORKERS"
-export VIA_B_TASKSET="$VIA_B_TASKSET"
-
 echo ""
 echo "################################################################################"
-echo "# RUNNING BENCHMARKS"
+echo "# TTB"
 echo "################################################################################"
-echo "VIA_B_TIME      $VIA_B_TIME"
-echo "VIA_B_RUNS      $VIA_B_RUNS"
-echo "VIA_B_TTB_RUNS  $VIA_B_TTB_RUNS"
-echo "VIA_B_TIRQ_RUNS $VIA_B_TIRQ_RUNS"
-echo "VIA_B_TIME_TTB  $VIA_B_TIME_TTB"
-echo "VIA_B_WORKERS   $VIA_B_WORKERS"
-echo "VIA_B_TASKSET   $VIA_B_TASKSET"
-echo ""
+echo "RUN: TTB"
+mkdir $VIA_BRESULT_DIR/ttb
+cd $VIA_BRESULT_DIR/ttb
+python3 $VIA_BEVAL_DIR/run_bench.py -targetfn $VIA_BEVAL_DIR/target_drvs_bug -time -1 -time_per_run $VIA_B_TIME_TTB -timeout 120 -runs $VIA_B_TTB_RUNS -workers $VIA_B_WORKERS -target_irqs 1 -update_hwm 1 -patch_level 1 -apply_hacks 1 -min_delay 1 -reset_indir -fast_irqs 1 > $VIA_BRESULT_DIR/ttb.log
+python3 $VIA_BEVAL_DIR/parse_bench.py . > $VIA_BRESULT_DIR/ttb.json
 
-$VIA_PATH/benchmarks/run_aga_benchmark.sh
-$VIA_PATH/benchmarks/run_tirq_benchmark.sh
-$VIA_PATH/benchmarks/run_delay_benchmark.sh
-$VIA_PATH/benchmarks/run_ttb_benchmark.sh
+echo "EVAL: TTB"
+python3 $VIA_BEVAL_DIR/eval_bench.py -data $VIA_BRESULT_DIR/ttb.json -confkey _tiq1_wait1-1000_hck1_pt11_pt20_del1 -key ttb | tee $VIA_BRESULT_DIR/ttb.res
+
