@@ -17,7 +17,7 @@ target_irq_key = "target_irq: "
 ns_wait_min_key = "ns_wait_min: "
 ns_wait_max_key = "ns_wait_max: "
 
-p_target_run = re.compile("(\w+)_r(\d+)\.log")
+p_target_run = re.compile("([-\w]+)_r(\d+)\.log")
 p_time_run =   re.compile("Done (\d+) runs in (\d+) second\(s\)")
 p_exec_units = re.compile("stat::number_of_executed_units:\s+(\d+)")
 p_avg_exec =   re.compile("stat::average_exec_per_sec:\s+(\d+)")
@@ -103,7 +103,8 @@ def get_cov(err_fn):
 
    return funcs, list(all_flines), list(c_flines), list(uc_flines)
 
-def parse_log(target, run):
+def parse_log(root, target, run):
+   #sys.stderr.write("%16s %s\n" % (target, run))
    ret = {}
    timestamps = []
    cov = []
@@ -117,8 +118,9 @@ def parse_log(target, run):
    avg_execs = 0
    time_run = 0
    exec_units = 0
-   time_fn = "./%s_r%s.log" % (target, run)
+   time_fn = os.path.join(root, "./%s_r%s.log" % (target, run))
    if not os.path.exists(time_fn):
+      sys.stderr.write("WARNING: no log for %s %s" % (target, run))
       return
    with open(time_fn, "r") as fd:
        for l in fd.readlines():
@@ -127,8 +129,9 @@ def parse_log(target, run):
              log_start_time = float(l.split()[-1])
           elif l.startswith("End: "):
              log_end_time = float(l.split()[-1])
-   err_fn = "./%s_r%s.err" % (target, run)
+   err_fn = os.path.join(root, "./%s_r%s.err" % (target, run))
    if not os.path.exists(err_fn):
+      sys.stderr.write("WARNING: no err for %s %s" % (target, run))
       return
    with open(err_fn, "r") as fd:
       lines = fd.readlines()
@@ -225,11 +228,12 @@ def parse_log(target, run):
 
 if __name__ == "__main__":
    targets = {}
-   for f in os.listdir("."):
+   target_dir = sys.argv[1]
+   for f in os.listdir(target_dir):
       m = p_target_run.match(f)
       if m:
          target, run = m.groups()
          if target not in targets.keys():
             targets[target] = {}
-         targets[target][run] = parse_log(target, run)
+         targets[target][run] = parse_log(target_dir, target, run)
    print(json.dumps(targets, indent=4, sort_keys=True))

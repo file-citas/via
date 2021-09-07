@@ -31,7 +31,7 @@ echo  "RUN: Rocker TIRQ"
 mkdir $VIA_BRESULT_DIR/rocker_tirq
 cd $VIA_BRESULT_DIR/rocker_tirq
 python3 $VIA_BEVAL_DIR/run_bench.py -targets rocker_tirq rocker_rirq_1_1000 -time -1 -time_per_run 10800 -timeout 120 -runs $VIA_B_TIRQ_RUNS -workers $VIA_B_WORKERS -taskset $VIA_B_TASKSET -patch_level 2 -update_hwm 1 -apply_hacks 1 -min_delay 1 -reset_indir -fast_irqs 0 > $VIA_BRESULT_DIR/rocker_triq.log
-python3 $VIA_BEVAL_DIR/parse_bench.py . > $VIA_BRESULT_DIR/rocker_triq.json
+python3 $VIA_BEVAL_DIR/parse_bench.py $VIA_BRESULT_DIR/rocker_tirq > $VIA_BRESULT_DIR/rocker_triq.json
 
 echo "EVAL: Rocker TIRQ TTB"
 python3 $VIA_BEVAL_DIR/eval_bench.py -data $VIA_BRESULT_DIR/rocker_triq.json -confkey _tiq1_wait1-1000_hck1_pt11_pt21_del1 _tiq0_wait1-1000_hck1_pt11_pt21_del1 -key ttb2 | tee $VIA_BRESULT_DIR/tirq.res
