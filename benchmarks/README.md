@@ -22,7 +22,7 @@ The results will be placed in `<results>/*.res`.
 The analysis via `run_all_benchmarks.sh` is configured via the following environment variables:
 * `VIA_B_TIME` total runtime for each target for the agamotto and delay benchmarks
 * `VIA_B_RUNS` number of runs (i.e. restarts) per target for the agamotto and delay benchmarks
-* `VIA_B_TTB_RUNS` number of runs per target for the TTB benchmark
+* `VIA_B_TTB_RUNS` number of runs per target for the TTB benchmark (**NOTE**: set this to a low value e.g. 4, otherwise the benchmark will take a long time; but intermediate results can be evaluated at any time during the benchmark run with the python scripts described below)
 * `VIA_B_TIRQ_RUNS` number of runs per target for the rocker targeted IRQ benchmark
 * `VIA_B_TIME_TTB` maximum time per run for the TTB benchmark
 * `VIA_B_WORKERS` number of workers
@@ -102,6 +102,8 @@ python3 $VIA_BEVAL_DIR/eval_bench.py -data $VIA_BRESULT_DIR/via_d.json $VIA_BRES
 ```
 
 ## TTB
+**NOTE**: set VIA_B_TTB_RUNS to a low value e.g. 4, otherwise the benchmark will take a long time; but intermediate results can be evaluated at any time during the benchmark run by invoking the parse_bench and eval_bench scripts as described below.
+
 ```
 mkdir $VIA_BRESULT_DIR/ttb
 cd $VIA_BRESULT_DIR/ttb
