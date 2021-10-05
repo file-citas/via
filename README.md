@@ -2,6 +2,8 @@ If any of the steps fail: check Notes section at the end for common problems and
 
 Important Note: most of the configurations files in [fuzz/configs](https://github.com/file-citas/via/tree/master/fuzz/configs) are not up to date. All tested and up to date configurations are listed in [benchmarks/eval/target_drvs](https://github.com/file-citas/via/blob/master/benchmarks/eval/target_drvs). To use one of the remaining configurations, please update it according to the configuration options described below.
 
+All benchmarks along with documentation and helper scripts can be found under [benchmarks](https://github.com/file-citas/via/tree/master/benchmarks).
+
 # Overview
 VIA is an in-process userspace Linux-kernel fuzzer, that targets the hardware-OS interface of device drivers.
 
